@@ -39,3 +39,32 @@ https://smallcultfollowing.com/babysteps/blog/2015/08/20/virtual-structs-part-3-
 
 
 
+```rust
+use std::f64::consts::PI;
+
+enum Shape {
+	Rectangle { width: f64, height: f64 },
+	Circle { radius: f64 },
+	RightAngleTriangle { base: f64, height: f64 },
+}
+
+impl Shape {
+	fn area(&self) -> f64 {
+		// should I try to come up with an example that has longer methods?
+		match self {
+			Shape::Rectangle { width, height } => width * height,
+			Shape::Circle { radius } => PI * radius.powi(2),
+			Shape::RightAngleTriangle { base, height } => 0.5 * base * height,
+		}
+	}
+}
+
+// Implement the display trait for the enum. How would you do this for a shape trait, would it be using a super trait???
+// What implications does that have due to object safety and having to box or whatever, example is the clone trait.
+
+// Can use a seperate constructor for each variant
+// One constructor will not work because of different fields
+fn new_rectangle(width: f64, height: f64) -> Shape {
+	Shape::Rectangle { width, height }
+}
+```
