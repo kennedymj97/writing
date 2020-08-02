@@ -1,4 +1,17 @@
-# Traits, Trait Objects, Enums and Generics in Rust
+# Best practices for polymorphism in Rust: Enums vs Traits and Structs
+
+What is polymorphism?
+
+For enums:
+- Readability/navigability
+
+For traits:
+- Extensibility
+
+Against traits:
+- Object safety, this is really the key reason to favour enums over traits, the fact that the size of the traits cannot be known by the compiler.
+
+---------------------------------------------------------------------------------------------------
 
 - What is the point of this article?
 	- What behaviour/pattern am I trying to discuss?
@@ -38,8 +51,9 @@ https://smallcultfollowing.com/babysteps/blog/2015/08/20/virtual-structs-part-3-
 [Something I disagree with](https://youtu.be/erJdCIti_O8?t=615)
 - The method does not have to be long, can extract all of the complex logic into functions, then call these functions in the match. In fact I argue this HELPS readability, all of the possible types are immediately apparent based on the enum and the behaviour of each type can be found easily by going to the functions, effectively acts a a table of contents or list to find all of the logic.
 
-
-Below are some example to work from, can show how enums are good. Need to do the traits implementation. Use the operator overloading examples to show what traits are good for! Think I need to do some discussion on trait objects here too as another potential reason to use traits.
+**Thoughts:**
+- Below are some example to work from, can show how enums are good. Need to do the traits implementation. Use the operator overloading examples to show what traits are good for! Think I need to do some discussion on trait objects here too as another potential reason to use traits.
+- Can you add clone to all the structs that implement a trait and then clone a vec of said types (ensuring different boxed ones?). I don't think so.
 ```rust
 use std::f64::consts::PI;
 
