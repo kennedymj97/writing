@@ -1,6 +1,171 @@
 # Best practices for polymorphism in Rust: Enums vs Traits and Structs
 
-What is polymorphism?
+When learning Rust I had some issues with how I implement polymorphism. It felt most natural to me to use traits, however there are some issues with traits (for good reasons) that make them a bit painful to work with. This post explains my current thinking on polymorphism, hopefully it will help you avoid making the mistakes I made.
+
+## What is polymorphism?
+Polymorphism is multiple different types implementing the same interface. It is different types that have common behaviour.
+
+There are two ways we can implement polymorphism in Rust, enums and traits.
+
+Structure:
+1. Simple example of how to do use both enums and traits for polymorphism, with explanation.
+2. Readability
+3. Extensibility
+4. Object safety
+5. Summary of approach, considering the above points what approach do I use?
+6. Traits with generics vs trait objects
+
+## Enums
+### How to do it.
+```rust
+#[derive(Debug)]
+pub enum Unit {
+	Metres(u64),
+	Centimetres(u64),
+	Millimetres(u64),
+}
+
+pub enum Shape {
+	Rectangle { width: Unit, height: Unit },
+	Circle { radius: Unit },
+	RightAngleTriangle { base: Unit, height: Unit },
+}
+
+impl Shape {
+	pub fn area(&self) -> Unit {
+		// should I try to come up with an example that has longer methods?
+		match self {
+			Shape::Rectangle { width, height } => rectangle::area(width, height),
+			Shape::Circle { radius } => ...,
+			Shape::RightAngleTriangle { base, height } => ...,
+		}
+	}
+}
+
+mod rectangle {
+	use super::*;
+
+	pub fn new(width: Unit, height: Unit) -> Shape {
+		Shape::Rectangle { width, height }
+	}
+	
+	pub fn area(width: Unit, height: Unit) -> Unit {
+		match width {
+			Unit::Metres(x) => match height {
+				Unit::Metres(y) => Unit::Metres(x * y),
+				Unit::Centimetres(y) => Unit::Centimetres((x * 100) * y),
+				Unit::Millimetres(y) => Unit::Millimetres((x * 1000) * y),
+			}
+			Unit::Centimetres(x) => match height {
+				Unit::Metres(y) => Unit::Centimetres(x * (y * 100)),
+				Unit::Centimetres(y) => Unit::Centimetres(x * y),
+				Unit::Millimetres(y) => Unit::Millimetres((x * 10) * y),
+			}
+			Unit::Millimetres(x) => match height {
+				Unit::Metres(y) => Unit::Millimetres(x * (y * 1000)),
+				Unit::Centimetres(y) => Unit::Millimetres(x * (y * 100)),
+				Unit::Millimetres(y) => Unit::Millimetres(x * y),
+			}
+		}
+	}
+}
+
+mod circle {
+	...
+}
+
+mod right_angle_triangle {
+	...
+}
+
+fn main() {
+    let area = rectangle::new(Unit::Metres(3), Unit::Centimetres(3)).area();
+    println!("{:?}", area);
+}
+```
+## Traits
+
+```rust
+trait Shape {
+	fn area(&self) -> Unit;
+}
+
+enum Unit {
+	Metres(u64),
+	Centimetres(u64),
+	Millimetres(u64),
+}
+
+struct Rectangle {
+	width: Unit,
+	height: Unit,
+}
+
+impl Rectangle {
+	fn new(width: Unit, height: Unit) -> Self {
+		Rectangle { width, height }
+	}
+}
+
+impl Shape for Rectangle {
+	fn area(&self) -> Unit {
+		match width {
+			Unit::Metres(x) => match height {
+				Unit::Metres(y) => Unit::Metres(x * y),
+				Unit::Centimetres(y) => Unit::Centimetres((x * 100) * y),
+				Unit::Millimetres(y) => Unit::Millimetres((x * 1000) * y),
+			}
+			Unit::Centimetres(x) => match height {
+				Unit::Metres(y) => Unit::Centimetres(x * (y * 100)),
+				Unit::Centimetres(y) => Unit::Centimetres(x * y),
+				Unit::Millimetres(y) => Unit::Millimetres((x * 10) * y),
+			}
+			Unit::Millimetres(x) => match height {
+				Unit::Metres(y) => Unit::Millimetres(x * (y * 1000)),
+				Unit::Centimetres(y) => Unit::Millimetres(x * (y * 100)),
+				Unit::Millimetres(y) => Unit::Millimetres(x * y),
+			}
+		}
+	}
+}
+
+struct Circle {
+	radius: Unit,
+}
+
+impl Circle {
+	...
+}
+
+impl Shape for Circle {
+	...
+}
+
+struct RightAngleTriangle {
+	base: Unit,
+	height: Unit,
+}
+
+impl RightAngleTriangle {
+	...
+}
+
+impl Shape for RightAngleTriangle {
+	...
+}
+
+
+fn main() {
+	let area = Rectangle::new(Unit::Metres(3), Unit::Centimetres(3)).area();
+    println!("{:?}", area);
+}
+```
+
+## Readability
+## Extensibility
+## Object safety
+
+
 
 For enums:
 - Readability/navigability
@@ -54,66 +219,6 @@ https://smallcultfollowing.com/babysteps/blog/2015/08/20/virtual-structs-part-3-
 **Thoughts:**
 - Below are some example to work from, can show how enums are good. Need to do the traits implementation. Use the operator overloading examples to show what traits are good for! Think I need to do some discussion on trait objects here too as another potential reason to use traits.
 - Can you add clone to all the structs that implement a trait and then clone a vec of said types (ensuring different boxed ones?). I don't think so.
-```rust
-use std::f64::consts::PI;
-
-enum Unit {
-	Metres(u64),
-	Centimetres(u64),
-	Millimetres(u64),
-}
-
-enum Shape {
-	Rectangle { width: Unit, height: Unit },
-	Circle { radius: Unit },
-	RightAngleTriangle { base: Unit, height: Unit },
-}
-
-impl Shape {
-	fn area(&self) -> Unit {
-		// should I try to come up with an example that has longer methods?
-		match self {
-			Shape::Rectangle { width, height } => get_area_of_rectangle(width, height),
-			//Shape::Circle { radius } => PI * radius.powi(2),
-			//Shape::RightAngleTriangle { base, height } => 0.5 * base * height,
-		}
-	}
-}
-
-fn get_area_of_rectangle(width: Unit, height: Unit) -> Unit {
-	match width {
-		Unit::Metres(x) => match height {
-			Unit::Metres(y) => Unit::Metres(x * y),
-			Unit::Centimetres(y) => Unit::Centimetres((x * 100) * y),
-			Unit::Millimetres(y) => Unit::Millimetres((x * 1000) * y),
-		}
-		Unit::Centimetres(x) => match height {
-			Unit::Metres(y) => Unit::Centimetres(x * (y * 100)),
-			Unit::Centimetres(y) => Unit::Centimetres(x * y),
-			Unit::Millimetres(y) => Unit::Millimetres((x * 10) * y),
-		}
-		Unit::Millimetres(x) => match height {
-			Unit::Metres(y) => Unit::Millimetres(x * (y * 1000)),
-			Unit::Centimetres(y) => Unit::Millimetres(x * (y * 100)),
-			Unit::Millimetres(y) => Unit::Millimetres(x * y),
-		}
-	}
-}
-
-fn main() {
-    let area = Shape::Rectangle{ width: Unit::Metres(3), height: Unit::Centimetres(3) }.area();
-    println!("{:?}", area);
-}
-
-// Implement the display trait for the enum. How would you do this for a shape trait, would it be using a super trait???
-// What implications does that have due to object safety and having to box or whatever, example is the clone trait.
-
-// Can use a seperate constructor for each variant
-// One constructor will not work because of different fields
-fn new_rectangle(width: f64, height: f64) -> Shape {
-	Shape::Rectangle { width, height }
-}
-```
 
 ```rust
 use std::f64::consts::PI;
@@ -186,3 +291,4 @@ fn new_rectangle(width: Unit, height: Unit) -> Shape {
 	Shape::Rectangle { width, height }
 }
 ```
+https://web.archive.org/web/20180121110408/http://keepcalmandlearnrust.com/2017/03/polymorphism-in-rust-enum-vs-trait-struct/
