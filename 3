@@ -102,15 +102,16 @@ fn sum_areas(shapes: Vec<Box<dyn Shape>>) -> f64 {
     })
 }
 
-// This violates object safety constraits so the Shape trait can no longer be used as a trait object.
+// This violates object safety constraits and will not work.
 trait Shape: Clone {
     ...
 }
+
 ```
 
-There are workarounds to be able to clone trait objects. But they are a pain and should be avoided if possible.
+To be clear there are workarounds to be able to clone trait objects. But they are a bit of a pain and should be avoided if possible.
  
-Enums can do everything a trait object would but the size of the enum is known and uses static dispatch. Allowing data structures that contain different shapes without having to worry about putting the type behind a reference and object safety constraints. Consider the previous example, one can simply derive clone for the enum and then implement the function, without any complaints from Rust.
+Enums can do everything a trait object would but the size of the enum is known and uses static dispatch. Making it simple to do something like a vector of the types, without having to worry about putting the types behind a reference and worrying about object safety constraints. Consider the previous example, one can simply derive clone for the enum and then implement the function, without having to worry about references or object safety!
 
 ```rust
 #[derive(Clone)]
@@ -126,16 +127,14 @@ fn sum_areas(shapes: Vec<Shape>) -> f64 {
 }
 ```
 
-The amount of space an enum will use is equal to it's largest variant. If one of the variants takes up a lot of space, one should consider putting it behind a reference (CITE).
-
 ## Discuss whether to use enums or traits
-Currently I default to using enums for polymorphic behaviour as they get all of the benefits of static dispatch without having to deal with object safety issues.
+Enums get all of the benefits of static dispatch without having to deal with object safety issues. This is the main reason I now use enums for polymorphic behaviour for most of my use cases.
 
-There are still a couple of times that I use traits. The main reason I will use traits is if I want users of the code to be able to add their own types, which enums do not allow. I also consider traits, if the behaviour is very generic, such that the interface I am defining is not determined by the types. In this case I am confident I will not be using the types that implement the trait as trait objects so do not run into the issues caused by dynamic dispatch. For example, even if only used in the same module, one would not implement Clone as an enum. Finding such generic behaviour is rare however.
+There are still a couple of times that I use traits. The first of these is if I want users of the library to be able to add their own types to a trait. This is the main reason for using traits. The second is that if the interface I am defining is not determined by the types the will implement it. This is because, I will not be using these as trait objects and the ability to define it for any type is needed. For example, even if only used internally one would not implement Clone as an enum. Finding such a generic behaviour is rare however.
 
-Some people argue that enums produce ugly code with methods that are long and hard to read. I disagree with this. If the methods start to get too long one can extract the logic into separate functions, even grouping these functions into a module if there a large number of methods. In fact, I think this makes the code easier to read. The methods can be used as a table of contents allowing one to view the logic by jumping to the functions, rather than have to search through the code for the individual types.
+I have seen some arguments that using enums produces methods that are long and hard to read. I disagree with this. If the methods start to get too long one can extract the logic into separate functions, even grouping these functions into a module if there a large number of methods. In fact, I think this makes the code easier to read. The methods can then effectively be used as a table of contents allowing viewing the logic by jumping to the functions, rather than have to search through the code for the individual types.
 
-One gripe I have with enums is that the variants are not considered types in their own right, meaning one cannot create functions that only work with an individual variant from the enum. This can be solved by creating the type using a struct and wrapping it in the enum, but this is a bit annoying. Others have had a similar problem and have found the enum dispatch removes this annoyance (https://users.rust-lang.org/t/trait-or-enum-for-sum-types/23310/6).
+One gripe I have is that the variants of enums are not considered types in their own right, meaning one cannot create functions that only work with an individual variant from the enum. This can be solved by creating the type and simply wrapping it in the enum, but this is a bit annoying. Others have had a similar problem and have found the enum dispatch removes this annoyance (https://users.rust-lang.org/t/trait-or-enum-for-sum-types/23310/6).
 
 ## Conclusion
 
